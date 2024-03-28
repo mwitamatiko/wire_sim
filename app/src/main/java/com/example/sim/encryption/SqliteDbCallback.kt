@@ -11,11 +11,8 @@ class SqliteDbCallback(private val context: Context,private val encryptor: Sqlit
         super.onCreate(db)
         encryptor.encrypt(context, File(db.path.toString()),alias)
     }
-
     override fun onOpen(db: SupportSQLiteDatabase) {
         super.onOpen(db)
         encryptor.decrypt(context,File(db.path.toString()),alias)
     }
-
-
 }

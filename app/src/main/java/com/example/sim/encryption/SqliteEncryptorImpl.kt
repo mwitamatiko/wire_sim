@@ -20,7 +20,6 @@ import javax.crypto.spec.IvParameterSpec
 import kotlin.random.Random
 
 object SqliteEncryptorImpl: SqliteEncryptor  {
-    private val charset = Charset.defaultCharset()
 
     private const val ALGORITHM = KeyProperties.KEY_ALGORITHM_AES
     private const val BLOCK_MODE = KeyProperties.BLOCK_MODE_GCM
@@ -29,9 +28,10 @@ object SqliteEncryptorImpl: SqliteEncryptor  {
     private val cipher = Cipher.getInstance(TRANSFORMATION)
 
     private val IV_LENGTH=12
+
     override fun decrypt(context: Context, file: File, alias: String) {
 
-        println("starting decrypion")
+        println("starting decryption")
         Log.e("alias",""+alias)
         val key = retrieveKeyFromKeystore(alias)
         Log.e("retrievedKey",""+key)
@@ -62,14 +62,13 @@ object SqliteEncryptorImpl: SqliteEncryptor  {
                     inputCipherStream.close()
                 }
             }
-
             input.close()
-
         }
         println("end decrypting")
 
     }
 
+    //works
     override fun encrypt(context: Context, file: File, alias: String) {
         Log.e("alias",""+alias)
         val key =  retrieveKeyFromKeystore(alias)
@@ -114,12 +113,6 @@ object SqliteEncryptorImpl: SqliteEncryptor  {
 
         val secretKey = keyGenerator.generateKey()
         Log.e("secretKeygenerated"," "+secretKey)
-//        //store key in android keystore
-//        val keyStore = KeyStore.getInstance("AndroidKeyStore")
-//        keyStore.load(null)
-//        keyStore.setEntry(alias,KeyStore.SecretKeyEntry(secretKey),null)
-//
-//        Log.e("keystore"," "+keyStore)
 
         return secretKey
     }
