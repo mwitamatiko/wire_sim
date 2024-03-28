@@ -15,13 +15,10 @@ class MainViewModel(application: Application): ViewModel() {
     private val repository: ProductRepository
     val searchResults :MutableLiveData<List<Product>>
 
-    val cipherutils = CipherUtils()
-
     init {
         val productDb = ProductRoomDatabase.getInstance(application)
         val productDao = productDb.productDao()
         repository = ProductRepository(productDao)
-
 
         allProducts = repository.allProducts
         searchResults=repository.searchResults

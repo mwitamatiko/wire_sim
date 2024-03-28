@@ -3,6 +3,7 @@ package com.example.sim.encryption
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 import android.content.Context
+import android.util.Log
 import java.io.File
 
 class SqliteDbCallback(private val context: Context,private val encryptor: SqliteEncryptor, private val alias: String): RoomDatabase.Callback() {
@@ -15,4 +16,6 @@ class SqliteDbCallback(private val context: Context,private val encryptor: Sqlit
         super.onOpen(db)
         encryptor.decrypt(context,File(db.path.toString()),alias)
     }
+
+
 }

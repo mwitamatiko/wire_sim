@@ -15,6 +15,7 @@ import javax.crypto.CipherInputStream
 import javax.crypto.CipherOutputStream
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.IvParameterSpec
 import kotlin.random.Random
 
@@ -27,20 +28,24 @@ object SqliteEncryptorImpl: SqliteEncryptor  {
     private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
     private val cipher = Cipher.getInstance(TRANSFORMATION)
 
+    private val IV_LENGTH=12
     override fun decrypt(context: Context, file: File, alias: String) {
+
+        println("starting decrypion")
         Log.e("alias",""+alias)
         val key = retrieveKeyFromKeystore(alias)
         Log.e("retrievedKey",""+key)
 
-//        val ivSize = 16
-//        val iv = ByteArray(ivSize)
-        val iv = cipher.iv
+        Log.e("filename",""+file)
 
-        FileInputStream(file).use { input ->
-            // read iv
+        val iv = ByteArray(IV_LENGTH)
+
+        FileInputStream(file).use {input ->
             input.read(iv,0,iv.size)
-            val ivParameterSpec = IvParameterSpec(iv)
-            cipher.init(Cipher.DECRYPT_MODE,key,ivParameterSpec)
+
+            val gcmParameterSpec = GCMParameterSpec(128,iv)
+
+            cipher.init(Cipher.DECRYPT_MODE,key,gcmParameterSpec)
 
             val decryptedFileName = file.name
             Log.i("decryptedFileName: ",""+decryptedFileName)
@@ -51,12 +56,17 @@ object SqliteEncryptorImpl: SqliteEncryptor  {
             Log.i("decryptedDbFile",""+decryptedDbFile)
 
             FileOutputStream(decryptedDbFile).use { output ->
-                val inputCipherStream = CipherInputStream(input, cipher)
-                inputCipherStream.copyTo(output)
-                inputCipherStream.close()
+                FileInputStream(file).use { input ->
+                    val inputCipherStream = CipherInputStream(input, cipher)
+                    inputCipherStream.copyTo(output)
+                    inputCipherStream.close()
+                }
             }
-        }
 
+            input.close()
+
+        }
+        println("end decrypting")
 
     }
 
