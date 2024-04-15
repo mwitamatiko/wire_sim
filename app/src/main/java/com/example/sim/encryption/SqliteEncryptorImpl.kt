@@ -3,16 +3,23 @@ package com.example.sim.encryption
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import android.util.Base64
 import android.util.Log
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.io.IOException
+import java.io.UnsupportedEncodingException
+import java.lang.Exception
 import java.nio.charset.Charset
 import java.security.InvalidKeyException
 import java.security.KeyStore
+import javax.crypto.AEADBadTagException
+import javax.crypto.BadPaddingException
 import javax.crypto.Cipher
 import javax.crypto.CipherInputStream
 import javax.crypto.CipherOutputStream
+import javax.crypto.IllegalBlockSizeException
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
@@ -27,46 +34,50 @@ object SqliteEncryptorImpl: SqliteEncryptor  {
     private const val TRANSFORMATION = "$ALGORITHM/$BLOCK_MODE/$PADDING"
     private val cipher = Cipher.getInstance(TRANSFORMATION)
 
-    private val IV_LENGTH=12
+    private val charset = Charset.defaultCharset()
+
 
     override fun decrypt(context: Context, file: File, alias: String) {
+        try {
+            val key = retrieveKeyFromKeystore(alias)
 
-        println("starting decryption")
-        Log.e("alias",""+alias)
-        val key = retrieveKeyFromKeystore(alias)
-        Log.e("retrievedKey",""+key)
+            FileInputStream(file).use { input ->
+                // Read IV size (first byte)
+                val ivSize = input.read()
+                if (ivSize < 0) {
+                    throw IOException("Invalid IV size")
+                }
 
-        Log.e("filename",""+file)
+                // Read IV bytes
+                val iv = ByteArray(ivSize)
+                val bytesRead = input.read(iv)
+                if (bytesRead != ivSize) {
+                    throw IOException("Could not read IV")
+                }
 
-        val iv = ByteArray(IV_LENGTH)
+                val ivParameterSpec = GCMParameterSpec(128, iv)
 
-        FileInputStream(file).use {input ->
-            input.read(iv,0,iv.size)
+                cipher.init(Cipher.DECRYPT_MODE, key, ivParameterSpec)
 
-            val gcmParameterSpec = GCMParameterSpec(128,iv)
+                val decryptedFileName = file.name
+                Log.i("decryptedFileName: ", "" + decryptedFileName)
+                val dbDir = context.getDatabasePath("databases").parentFile
+                Log.i("dbdirpath: ", "" + dbDir)
 
-            cipher.init(Cipher.DECRYPT_MODE,key,gcmParameterSpec)
+                val decryptedDbFile = File(dbDir, decryptedFileName)
+                Log.i("decryptedDbFile", "" + decryptedDbFile)
 
-            val decryptedFileName = file.name
-            Log.i("decryptedFileName: ",""+decryptedFileName)
-            val dbDir = context.getDatabasePath("databases").parentFile
-            Log.i("dbdirpath: ",""+dbDir)
-
-            val decryptedDbFile = File(dbDir,decryptedFileName)
-            Log.i("decryptedDbFile",""+decryptedDbFile)
-
-            FileOutputStream(decryptedDbFile).use { output ->
-                FileInputStream(file).use { input ->
+                FileOutputStream(decryptedDbFile).use { output ->
                     val inputCipherStream = CipherInputStream(input, cipher)
                     inputCipherStream.copyTo(output)
                     inputCipherStream.close()
                 }
             }
-            input.close()
+        } catch (e: Exception) {
+            Log.e("Decrypt", "Error decrypting file: ${e.message}", e)
         }
-        println("end decrypting")
-
     }
+
 
     //works
     override fun encrypt(context: Context, file: File, alias: String) {
